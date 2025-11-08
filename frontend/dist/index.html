@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Asphalt Companion (Windows)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>body{font-family:Arial,Helvetica,sans-serif;padding:20px;background:#f4f6f8} .card{background:#fff;padding:20px;border-radius:8px;max-width:780px;margin:12px auto;box-shadow:0 2px 8px rgba(0,0,0,0.06)} button{padding:8px 12px;border-radius:6px;border:none;background:#2563eb;color:#fff}</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Asphalt Companion (Local)</h1>
+    <p>This is a lightweight local build. Use the buttons below to open the API docs or try a quick demo.</p>
+    <p>
+      <button onclick="window.location.href='/docs'">Open API docs</button>
+      <button onclick="openQuickDemo()">Quick demo: Register & upload</button>
+    </p>
+    <div id="demo"></div>
+  </div>
+<script>
+async function openQuickDemo(){
+  const d = document.getElementById('demo');
+  d.innerHTML = '<p>Registering demo user...</p>';
+  try{
+    let res = await fetch('/api/register', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:'demo', email:'demo@example.com', password:'demo123'})});
+    if(!res.ok) {
+      const j = await res.json().catch(()=>null);
+      d.innerHTML = '<p>Register failed: ' + (j && j.detail ? j.detail : 'already exists or error') + '</p>';
+    } else {
+      const j = await res.json();
+      d.innerHTML = '<p>Registered demo user: ' + j.username + '</p>';
+    }
+    d.innerHTML += '<p>Logging in...</p>';
+    let tokenRes = await fetch('/api/token', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:'demo', password:'demo123'})});
+    const tokenJson = await tokenRes.json();
+    if(!tokenRes.ok){ d.innerHTML += '<p>Login failed.</p>'; return; }
+    const token = tokenJson.access_token;
+    localStorage.setItem('asphalt_token', token);
+    d.innerHTML += '<p>Logged in. Uploading sample CSV...</p>';
+    const csv = 'car_name,track,position,lap_times,nitro_used\\nFalcon GT,Desert Rush,1,101.2;100.8;99.5,12.5\\nViper X,Coastal Run,2,98.1;97.9,10.2';
+    const fd = new FormData();
+    const blob = new Blob([csv], {type:'text/csv'});
+    fd.append('file', blob, 'sample.csv');
+    const up = await fetch('/api/matches/upload', {method:'POST', headers:{'Authorization':'Bearer ' + token}, body: fd});
+    const upj = await up.json();
+    d.innerHTML += '<p>Upload result: ' + (upj.created || '0') + ' matches created.</p>';
+    d.innerHTML += '<p>View API docs for more endpoints.</p>';
+  }catch(e){ d.innerHTML = '<p>Error: '+e.message+'</p>'; }
+}
+</script>
+</body>
+</html>
