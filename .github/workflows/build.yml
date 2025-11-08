@@ -1,0 +1,38 @@
+name: Build Asphalt Companion EXE
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build EXE
+        run: |
+          cd backend
+          pyinstaller --noconfirm --onefile run_app.py
+          move dist\run_app.exe ..\AsphaltCompanion.exe
+
+      - name: Upload built EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: AsphaltCompanion
+          path: AsphaltCompanion.exe
